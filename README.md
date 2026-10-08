@@ -1,172 +1,116 @@
-<img align="left" width="80" height="80" src="metadata/en-US/images/icon.png"
-alt="App icon">
+<img align="left" width="80" height="80" src="metadata/en-US/images/icon.png" alt="App icon">
 
-# Aegis Authenticator
+# Aegis with Nutstore (Jianguoyun) cloud backups
 
 <br>
 
-[![Build](https://github.com/beemdevelopment/Aegis/actions/workflows/build-app-workflow.yaml/badge.svg)](https://github.com/beemdevelopment/Aegis/actions/workflows/build-app-workflow.yaml?query=branch%3Amaster) [![Crowdin](https://badges.crowdin.net/aegis-authenticator/localized.svg)](https://crowdin.com/project/aegis-authenticator) [![Donate](https://img.shields.io/badge/donate-buy%20us%20a%20beer-%23FF813F)](https://www.buymeacoffee.com/beemdevelopment) [![Matrix](https://img.shields.io/matrix/aegis:matrix.org?color=blue)](https://matrix.to/#/#aegis:matrix.org)
+> **Unofficial fork.** This repository is a fork of
+> [Aegis Authenticator](https://github.com/beemdevelopment/Aegis) based on version 3.4.3.
+> It is not affiliated with or endorsed by the upstream project or by Nutstore. All of the
+> base features described in the [upstream README](https://github.com/beemdevelopment/Aegis#readme)
+> are still available; this fork adds an optional encrypted cloud backup target.
 
-**Aegis Authenticator** is a free, secure and open source 2FA app for Android.
-It aims to provide a secure authenticator for your online services, while also
-including some features missing in existing authenticator apps, like proper
-encryption and backups. Aegis supports HOTP and TOTP, making it compatible with
-thousands of services.
+**Aegis** is a free, secure and open source 2FA app for Android. It stores the vault encrypted
+with AES-256-GCM and scrypt, and supports HOTP/TOTP, biometric unlock, encrypted exports and
+local/Android backups.
 
-For a list of frequently asked questions, please check out [the FAQ](FAQ.md).
+This fork adds **automatic encrypted backups to [Nutstore](https://www.jianguoyun.com/)
+(坚果云) over WebDAV**, plus manual restore from the cloud.
 
-The security design of the app and the vault format is described in detail in
-[this document](docs/vault.md).
+## What this fork adds
 
-## Features
+- **Automatic encrypted backups.** After every change the vault is exported in the standard
+  Aegis backup format (encrypted, biometric slots stripped, independent backup password
+  respected) and uploaded to the configured Nutstore account over
+  `https://dav.jianguoyun.com/dav/`.
+- **Manual restore.** Browse the device directories and backup versions stored on Nutstore,
+  download a version and import it through the existing Aegis import flow (entry selection,
+  duplicate detection, explicit wipe confirmation). On a fresh install the welcome screen has
+  a "Restore from Nutstore" entry.
+- **Background uploads.** WorkManager keeps requests across process death. Snapshots are
+  written atomically to `noBackupFilesDir` (never to the cache directory) and can be uploaded
+  while the vault is locked.
+- **Verified, idempotent uploads.** Every upload is verified by downloading the file again and
+  comparing a SHA-256 digest before it is recorded as successful. Retries reuse the same
+  remote file name; old remote versions are pruned only inside the app's own device directory
+  and only after a complete directory listing was received.
+- **Credential hygiene.** The Nutstore application password is encrypted with a dedicated
+  Android Keystore alias that does not require user authentication, and stored in a private
+  file inside `noBackupFilesDir`. It never enters SharedPreferences, Android system backups,
+  WorkManager input data, logs or the exported vault.
+- **Hardened WebDAV client.** Fixed HTTPS endpoint, no redirects, re-validation of every href
+  returned by the server, request/XML/download size limits, timeouts, cancellation and
+  classified errors (authentication, permission, quota, rate limiting, server, network).
 
-- Free and open source
-- Secure
-  - The vault is encrypted (AES-256-GCM), and can be unlocked with:
-    - Password (scrypt)
-    - Biometrics (Android Keystore)
-  - Screen capture prevention
-  - Tap to reveal
-- Compatible with Google Authenticator
-- Supports industry standard algorithms:
-  [HOTP](https://tools.ietf.org/html/rfc4226) and
-  [TOTP](https://tools.ietf.org/html/rfc6238)
-- Lots of ways to add new entries
-  - Scan a QR code or an image of one
-  - Enter details manually
-  - Import from other authenticator apps: 2FAS Authenticator, Authenticator
-    Plus, Authy, andOTP, FreeOTP, FreeOTP+, Google Authenticator, Microsoft
-    Authenticator, Plain text, Steam, TOTP Authenticator and WinAuth (root
-    access is required for some of these)
-- Organization
-  - Alphabetic/custom sorting
-  - Custom or automatically generated icons
-  - Group entries together
-  - Advanced entry editing
-  - Search by name/issuer
-- Material design with multiple themes: Light, Dark, AMOLED
-- Export (plaintext or encrypted)
-- Automatic backups of the vault to a location of your choosing
+Design and verification documents (Chinese):
 
-## Screenshots
+- [Feature and design](docs/jianguoyun-backup-plan.md)
+- [Implementation plan and progress](docs/jianguoyun-development-plan.md)
+- [Validation record](docs/jianguoyun-validation.md)
 
-[<img width=200 alt="Screenshot 1"
-src="metadata/en-US/images/phoneScreenshots/screenshot1.png?raw=true">](metadata/en-US/images/phoneScreenshots/screenshot1.png?raw=true)
-[<img width=200 alt="Screenshot 2"
-src="metadata/en-US/images/phoneScreenshots/screenshot2.png?raw=true">](metadata/en-US/images/phoneScreenshots/screenshot2.png?raw=true)
-[<img width=200 alt="Screenshot 3"
-src="metadata/en-US/images/phoneScreenshots/screenshot3.png?raw=true">](metadata/en-US/images/phoneScreenshots/screenshot3.png?raw=true)
-[<img width=200 alt="Screenshot 4"
-src="metadata/en-US/images/phoneScreenshots/screenshot4.png?raw=true">](metadata/en-US/images/phoneScreenshots/screenshot4.png?raw=true)
+## How to use
 
-[<img width=200 alt="Screenshot 5"
-src="metadata/en-US/images/phoneScreenshots/screenshot5.png?raw=true">](metadata/en-US/images/phoneScreenshots/screenshot5.png?raw=true)
-[<img width=200 alt="Screenshot 6"
-src="metadata/en-US/images/phoneScreenshots/screenshot6.png?raw=true">](metadata/en-US/images/phoneScreenshots/screenshot6.png?raw=true)
-[<img width=200 alt="Screenshot 7"
-src="metadata/en-US/images/phoneScreenshots/screenshot7.png?raw=true">](metadata/en-US/images/phoneScreenshots/screenshot7.png?raw=true)
-[<img width=200 alt="Screenshot 8"
-src="metadata/en-US/images/phoneScreenshots/screenshot8.png?raw=true">](metadata/en-US/images/phoneScreenshots/screenshot8.png?raw=true)
+1. Create an application password in Nutstore ("Security settings" → third-party
+   applications). The main account password is not used by this app.
+2. Open **Settings → Backups → Nutstore (Jianguoyun) backups**, enter the account, the
+   application password and a remote directory (default `Aegis`), then use
+   **Test connection** to verify directory and write access.
+3. Enable **Automatic backup**. Only encrypted vaults can be uploaded; it is recommended to
+   set a backup password (or remember the vault password) because restores need it.
+4. To restore, open the same screen, refresh the version list and tap a version. The standard
+   import flow asks for the backup password. On a fresh install use
+   **Restore from Nutstore** on the welcome screen.
 
-## Downloads
+### 中文说明
 
-Aegis is available on the Google Play Store and on F-Droid.
+- 本仓库是 [Aegis](https://github.com/beemdevelopment/Aegis) 3.4.3 的非官方分支，新增了
+  **坚果云（WebDAV）自动加密备份与手动恢复**功能，遵循上游的 GPL-3.0 许可证。
+- 使用方式：设置 → 备份 → 坚果云备份，填写坚果云账号与在“安全设置 → 第三方应用管理”
+  创建的应用密码，点击“测试连接”确认目录可写后开启自动备份。
+- 只有加密后的数据库才会被上传；备份文件是标准 Aegis 加密格式，可用数据库密码或独立
+  备份密码恢复。新安装可点欢迎页的“从坚果云恢复”。
+- 应用密码使用独立的 Android Keystore 密钥加密后保存在不参与系统备份的私有文件中，
+  不会写入日志、系统备份或导出的数据库。
 
-[<img height=80 alt="Get it on Google Play"
-src="https://play.google.com/intl/en_us/badges/images/generic/en-play-badge.png"
-/>](http://play.google.com/store/apps/details?id=com.beemdevelopment.aegis)
-[<img height="80" alt="Get it on F-Droid"
-src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png"
-/>](https://f-droid.org/app/com.beemdevelopment.aegis)
+## Building
 
-### Verification
+Requirements: JDK 21 and Android SDK 36 (`ANDROID_HOME` or `local.properties`).
 
-APK releases on Google Play and GitHub are signed using the same key. They can
-be verified using
-[apksigner](https://developer.android.com/studio/command-line/apksigner.html#options-verify):
-
-```
-apksigner verify --print-certs --verbose aegis.apk
+```shell
+./gradlew assembleDebug        # app/build/outputs/apk/debug/app-debug.apk
+./gradlew testDebugUnitTest    # unit tests
+./gradlew lintDebug            # Android lint
+./gradlew build                # what CI runs (debug + release variants)
 ```
 
-The output should look like:
+Optional live integration test against a real Nutstore account. It is skipped when no
+credentials are passed and it cleans up its remote test artifacts:
 
-```
-Verifies
-Verified using v1 scheme (JAR signing): true
-Verified using v2 scheme (APK Signature Scheme v2): true
-```
-
-The certificate fingerprints should correspond to the ones listed below:
-
-```
-Owner: CN=Beem Development
-Issuer: CN=Beem Development
-Serial number: 172380c
-Valid from: Sat Feb 09 14:05:49 CET 2019 until: Wed Feb 03 14:05:49 CET 2044
-Certificate fingerprints:
-   MD5:  AA:EE:86:DB:C7:B8:88:9F:1F:C9:D0:7A:EC:37:36:32
-   SHA1: 59:FB:63:B7:1F:CE:95:74:6C:EB:1E:1A:CB:2C:2E:45:E5:FF:13:50
-   SHA256: C6:DB:80:A8:E1:4E:52:30:C1:DE:84:15:EF:82:0D:13:DC:90:1D:8F:E3:3C:F3:AC:B5:7B:68:62:D8:58:A8:23
+```shell
+./gradlew :app:connectedDebugAndroidTest \
+  "-Pandroid.testInstrumentationRunnerArguments.class=com.beemdevelopment.aegis.backup.NutstoreLiveIntegrationTest" \
+  "-Pandroid.testInstrumentationRunnerArguments.nutstoreAccount=<account>" \
+  "-Pandroid.testInstrumentationRunnerArguments.nutstorePassword=<application password>"
 ```
 
-### Icon packs
+## License and attribution
 
-Aegis supports icon packs to make it easier to assign icons to the entries in
-your vault. There are no official icon packs, but the community maintains a
-number of third-party icon packs you may want to check out. To learn how to
-create your own Aegis-compatible icon pack, see [the
-documentation](docs/iconpacks.md).
+This project is licensed under the **GNU General Public License v3.0**, the same license as the
+upstream project it is based on; see [LICENSE](LICENSE).
 
-- [aegis-icons](https://github.com/aegis-icons/aegis-icons)
+- Upstream project: [beemdevelopment/Aegis](https://github.com/beemdevelopment/Aegis),
+  Copyright (C) the Aegis contributors, GPL-3.0.
+- This fork: modifications made in October 2026 to add Nutstore (Jianguoyun) backup support.
+  A summary of the changes is in [CHANGELOG.md](CHANGELOG.md); the full corresponding source
+  is included in this repository.
 
-  Unofficial monochrome-styled 2FA icons.
+The app name "Aegis" and the original icon come from the upstream project and are kept so that
+existing users recognize the base app. This repository is an unofficial fork and is not
+affiliated with the upstream project or with Nutstore.
 
-  [<img width=500 alt="aegis-icons preview"
-  src="metadata/en-US/images/iconPacks/aegis-icons.png">](https://github.com/aegis-icons/aegis-icons)
+## Documentation
 
-- [delta-aegis-icons](https://github.com/Delta-Icons/aegis-icons)
-
-  Delta version of the unofficial monochrome-styled 2FA icon pack aegis-icons.
-
-  [<img width=500 alt="delta-icons preview"
-  src="metadata/en-US/images/iconPacks/delta-icons.png">](https://github.com/Delta-Icons/aegis-icons)
-
-- [aegis-simple-icons](https://github.com/alexbakker/aegis-simple-icons) \*
-
-  This project periodically generates an icon pack for Aegis based on [Simple
-  Icons](https://simpleicons.org/).
-
-  [<img width=500 alt="aegis-simple-icons preview"
-  src="metadata/en-US/images/iconPacks/aegis-simple-icons.png">](https://github.com/alexbakker/aegis-simple-icons)
-
-- [aegis-simple-icons-outlined](https://github.com/michaelschattgen/aegis-simple-icons-outlined) \*
-
-  This is a variant on the aegis-simple-icons pack where the icons contain no solid background and just the outlines are being used.
-
-  [<img width=500 alt="aegis-simple-icons-outlined preview"
-  src="metadata/en-US/images/iconPacks/aegis-simple-icons-outlined.png">](https://github.com/michaelschattgen/aegis-simple-icons-outlined)
-
-\* The icons are automatically generated, so
-not all of them are as high quality as the ones you'll find in
-[aegis-icons](https://github.com/aegis-icons/aegis-icons).
-
-## Contributing
-
-Looking to contribute to Aegis? That's great! There are a couple of ways to help
-out. Translations, bug reports and pull requests are all greatly appreciated.
-Please refer to our [contributing guidelines](CONTRIBUTING.md) to get started.
-
-Swing by our Matrix room to interact with other contributors:
-[#aegis:matrix.org](https://matrix.to/#/#aegis:matrix.org).
-
-## License
-
-This project is licensed under the GNU General Public License v3.0. See the
-[LICENSE](LICENSE) file for details.
-
-A couple of libraries vendored in Aegis' repository are licensed under a
-different license:
-
-- [TextDrawable](app/src/main/java/com/amulyakhare/textdrawable)
-- [TrustedIntents](app/src/main/java/info/guardianproject/trustedintents)
+- [FAQ.md](FAQ.md) – upstream frequently asked questions
+- [docs/vault.md](docs/vault.md) – upstream security design of the vault format
+- [CONTRIBUTING.md](CONTRIBUTING.md) – upstream contribution guidelines
+- [SECURITY.md](SECURITY.md) – how to report security issues

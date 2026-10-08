@@ -6,6 +6,7 @@ import android.widget.Toast;
 
 import com.beemdevelopment.aegis.BuildConfig;
 import com.beemdevelopment.aegis.R;
+import com.beemdevelopment.aegis.backup.NutstoreBackupManager;
 import com.beemdevelopment.aegis.crypto.pins.GuardianProjectFDroidRSA2048;
 import com.beemdevelopment.aegis.vault.VaultRepository;
 
@@ -37,6 +38,10 @@ public class PanicResponderActivity extends AegisActivity {
         }
 
         if (intent != null && PANIC_TRIGGER_ACTION.equals(intent.getAction())) {
+            // Cancel cloud work and remove local cloud credentials and
+            // snapshots before the vault itself is cleared. Requests that were
+            // already sent to the server cannot be recalled.
+            NutstoreBackupManager.wipe(this);
             VaultRepository.deleteFile(this);
             _vaultManager.lock(false);
             finishApp();

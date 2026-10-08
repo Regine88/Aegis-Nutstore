@@ -15,6 +15,7 @@ import androidx.fragment.app.Fragment;
 import com.beemdevelopment.aegis.BackupsVersioningStrategy;
 import com.beemdevelopment.aegis.Preferences;
 import com.beemdevelopment.aegis.R;
+import com.beemdevelopment.aegis.backup.NutstoreBackupManager;
 import com.beemdevelopment.aegis.crypto.KeyStoreHandle;
 import com.beemdevelopment.aegis.crypto.KeyStoreHandleException;
 import com.beemdevelopment.aegis.database.AuditLogRepository;
@@ -36,6 +37,7 @@ public class VaultManager {
 
     private final VaultBackupManager _backups;
     private final BackupManager _androidBackups;
+    private final NutstoreBackupManager _nutstoreBackups;
 
     private final List<LockListener> _lockListeners;
     private boolean _blockAutoLock;
@@ -47,6 +49,7 @@ public class VaultManager {
         _prefs = new Preferences(_context);
         _backups = new VaultBackupManager(_context, auditLogRepository);
         _androidBackups = new BackupManager(context);
+        _nutstoreBackups = new NutstoreBackupManager(_context);
         _lockListeners = new ArrayList<>();
         _auditLogRepository = auditLogRepository;
     }
@@ -120,6 +123,11 @@ public class VaultManager {
         getVault().setCredentials(null);
         save();
 
+        // Cloud backups are only allowed for encrypted vaults, so pending
+        // snapshots and the stored Nutstore credentials are removed. The
+        // KeyStore cleanup below also removes the Nutstore credential key.
+        NutstoreBackupManager.wipe(_context);
+
         // remove any keys that are stored in the KeyStore
         try {
             KeyStoreHandle handle = new KeyStoreHandle();
@@ -138,6 +146,10 @@ public class VaultManager {
 
     public void saveAndBackup() throws VaultRepositoryException {
         save();
+
+        // Cloud backup scheduling must never make a successful local save look
+        // like a failure; pending uploads are retried on the next save.
+        _nutstoreBackups.requestBackupIfEnabled();
 
         boolean backedUp = false;
         if (getVault().isEncryptionEnabled()) {

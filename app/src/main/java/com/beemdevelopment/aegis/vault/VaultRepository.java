@@ -34,6 +34,14 @@ public class VaultRepository {
     public static final String FILENAME_PREFIX_EXPORT_URI = "aegis-export-uri";
     public static final String FILENAME_PREFIX_EXPORT_HTML = "aegis-export-html";
 
+    /**
+     * Guards the vault file against concurrent reads, writes and deletes.
+     * AtomicFile protects against torn files, but it is not a locking
+     * mechanism: without this lock the panic trigger could delete the vault
+     * file while a snapshot of it is being created.
+     */
+    private static final Object FILE_LOCK = new Object();
+
     @NonNull
     private final Vault _vault;
 
@@ -54,38 +62,57 @@ public class VaultRepository {
     }
 
     public static boolean fileExists(Context context) {
-        File file = getAtomicFile(context).getBaseFile();
-        return file.exists() && file.isFile();
+        synchronized (FILE_LOCK) {
+            File file = getAtomicFile(context).getBaseFile();
+            return file.exists() && file.isFile();
+        }
     }
 
     public static void deleteFile(Context context) {
-        getAtomicFile(context).delete();
+        synchronized (FILE_LOCK) {
+            getAtomicFile(context).delete();
+        }
     }
 
     public static VaultFile readVaultFile(Context context) throws VaultRepositoryException {
-        AtomicFile file = getAtomicFile(context);
+        synchronized (FILE_LOCK) {
+            AtomicFile file = getAtomicFile(context);
 
-        try {
-            byte[] fileBytes = file.readFully();
-            return VaultFile.fromBytes(fileBytes);
-        } catch (IOException | VaultFileException e) {
-            throw new VaultRepositoryException(e);
+            try {
+                byte[] fileBytes = file.readFully();
+                return VaultFile.fromBytes(fileBytes);
+            } catch (IOException | VaultFileException e) {
+                throw new VaultRepositoryException(e);
+            }
+        }
+    }
+
+    /**
+     * Reads the vault file and converts it to the exportable format while
+     * holding the repository file lock. The returned file keeps the vault
+     * ciphertext, so it can be serialized without the master key.
+     */
+    public static VaultFile readExportableVaultFile(Context context) throws VaultRepositoryException {
+        synchronized (FILE_LOCK) {
+            return readVaultFile(context).exportable();
         }
     }
 
     public static void writeToFile(Context context, InputStream inStream) throws IOException {
-        AtomicFile file = VaultRepository.getAtomicFile(context);
+        synchronized (FILE_LOCK) {
+            AtomicFile file = VaultRepository.getAtomicFile(context);
 
-        FileOutputStream outStream = null;
-        try {
-            outStream = file.startWrite();
-            IOUtils.copy(inStream, outStream);
-            file.finishWrite(outStream);
-        } catch (IOException e) {
-            if (outStream != null) {
-                file.failWrite(outStream);
+            FileOutputStream outStream = null;
+            try {
+                outStream = file.startWrite();
+                IOUtils.copy(inStream, outStream);
+                file.finishWrite(outStream);
+            } catch (IOException e) {
+                if (outStream != null) {
+                    file.failWrite(outStream);
+                }
+                throw e;
             }
-            throw e;
         }
     }
 

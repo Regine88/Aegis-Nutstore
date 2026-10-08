@@ -3,6 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
@@ -81,6 +83,9 @@
         <activity
             android:name=".ui.PreferencesActivity"
             android:label="@string/title_activity_preferences" />
+        <activity
+            android:name=".ui.NutstoreBackupsActivity"
+            android:label="@string/title_activity_nutstore_backups" />
         <activity
             android:name=".ui.GroupManagerActivity"
             android:label="@string/title_activity_manage_groups" />

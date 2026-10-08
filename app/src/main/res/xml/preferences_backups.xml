@@ -39,6 +39,11 @@
             android:key="pref_backups_versions"
             android:title="@string/pref_backups_versions_title" />
         <Preference
+            android:key="pref_nutstore_backup"
+            android:title="@string/pref_nutstore_backup_title"
+            android:summary="@string/pref_nutstore_backup_summary"
+            app:icon="@drawable/ic_outline_cloud_upload_24" />
+        <Preference
             android:key="pref_status_backup_builtin"
             android:persistent="false"
             android:selectable="false" />

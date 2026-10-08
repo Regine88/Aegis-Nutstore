@@ -20,6 +20,13 @@ import androidx.preference.SwitchPreferenceCompat;
 import com.beemdevelopment.aegis.BackupsVersioningStrategy;
 import com.beemdevelopment.aegis.Preferences;
 import com.beemdevelopment.aegis.R;
+import com.beemdevelopment.aegis.backup.NutstoreBackupException;
+import com.beemdevelopment.aegis.backup.NutstoreBackupManager;
+import com.beemdevelopment.aegis.backup.NutstoreBackupStatus;
+import com.beemdevelopment.aegis.backup.NutstoreBackupStore;
+import com.beemdevelopment.aegis.backup.NutstoreCredentialStore;
+import com.beemdevelopment.aegis.backup.NutstoreCredentialsException;
+import com.beemdevelopment.aegis.ui.NutstoreBackupsActivity;
 import com.beemdevelopment.aegis.ui.dialogs.Dialogs;
 import com.beemdevelopment.aegis.vault.VaultBackupManager;
 import com.beemdevelopment.aegis.vault.VaultRepositoryException;
@@ -34,6 +41,7 @@ public class BackupsPreferencesFragment extends PreferencesFragment {
     private Preference _backupsTriggerPreference;
     private Preference _backupsVersionsPreference;
     private Preference _backupsPasswordWarningPreference;
+    private Preference _nutstoreBackupPreference;
 
     private Preference _builtinBackupStatusPreference;
     private Preference _androidBackupStatusPreference;
@@ -167,6 +175,12 @@ public class BackupsPreferencesFragment extends PreferencesFragment {
             });
             return false;
         });
+
+        _nutstoreBackupPreference = requirePreference("pref_nutstore_backup");
+        _nutstoreBackupPreference.setOnPreferenceClickListener(preference -> {
+            startActivity(new Intent(requireContext(), NutstoreBackupsActivity.class));
+            return true;
+        });
     }
 
     private void saveAndDisableBackupReminder(boolean understand) {
@@ -216,6 +230,25 @@ public class BackupsPreferencesFragment extends PreferencesFragment {
         }
         _builtinBackupStatusPreference.setVisible(backupEnabled);
         _androidBackupStatusPreference.setVisible(androidBackupEnabled);
+        updateNutstoreBackupSummary();
+    }
+
+    private void updateNutstoreBackupSummary() {
+        try {
+            NutstoreCredentialStore.Config config =
+                    new NutstoreCredentialStore(requireContext()).loadConfig();
+            if (config.getAccount() == null || !config.isPasswordStored()) {
+                _nutstoreBackupPreference.setSummary(R.string.pref_nutstore_backup_summary);
+                return;
+            }
+
+            NutstoreBackupStore.State state =
+                    new NutstoreBackupManager(requireContext()).loadState();
+            _nutstoreBackupPreference.setSummary(
+                    NutstoreBackupStatus.describe(requireContext(), state, true));
+        } catch (NutstoreCredentialsException | NutstoreBackupException e) {
+            _nutstoreBackupPreference.setSummary(R.string.pref_nutstore_backup_summary);
+        }
     }
 
     private void updateBackupStatus(Preference pref, Preferences.BackupResult res) {

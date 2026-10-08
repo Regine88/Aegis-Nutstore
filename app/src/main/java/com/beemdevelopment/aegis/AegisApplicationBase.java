@@ -19,6 +19,7 @@ import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.ProcessLifecycleOwner;
 
 import com.beemdevelopment.aegis.receivers.VaultLockReceiver;
+import com.beemdevelopment.aegis.backup.NutstoreBackupManager;
 import com.beemdevelopment.aegis.ui.MainActivity;
 import com.beemdevelopment.aegis.util.IOUtils;
 import com.beemdevelopment.aegis.vault.VaultManager;
@@ -55,6 +56,10 @@ public abstract class AegisApplicationBase extends Application {
 
         // clear the cache directory on startup, to make sure no temporary vault export files remain
         IOUtils.clearDirectory(getCacheDir(), false);
+
+        // Reinstate a cloud upload that was interrupted by a process death.
+        // Pending snapshots are stored outside of the cache directory.
+        new NutstoreBackupManager(this).resumePendingWork();
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
             initAppShortcuts();

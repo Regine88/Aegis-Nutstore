@@ -46,6 +46,11 @@ import com.beemdevelopment.aegis.GroupPlaceholderType;
 import com.beemdevelopment.aegis.Preferences;
 import com.beemdevelopment.aegis.R;
 import com.beemdevelopment.aegis.SortCategory;
+import com.beemdevelopment.aegis.backup.NutstoreBackupException;
+import com.beemdevelopment.aegis.backup.NutstoreBackupStatus;
+import com.beemdevelopment.aegis.backup.NutstoreBackupStore;
+import com.beemdevelopment.aegis.backup.NutstoreCredentialStore;
+import com.beemdevelopment.aegis.backup.NutstoreCredentialsException;
 import com.beemdevelopment.aegis.helpers.BitmapHelper;
 import com.beemdevelopment.aegis.helpers.DropdownHelper;
 import com.beemdevelopment.aegis.helpers.FabMenuHelper;
@@ -1164,12 +1169,20 @@ public class MainActivity extends AegisActivity implements EntryListView.Listene
        ErrorCardInfo info = null;
 
        Preferences.BackupResult backupRes = _prefs.getErroredBackupResult();
+       NutstoreBackupStore.State nutstoreState = getNutstoreFailureState();
        if (backupRes != null) {
            info = new ErrorCardInfo(getString(R.string.backup_error_bar_message), view -> {
                Dialogs.showBackupErrorDialog(this, backupRes, (dialog, which) -> {
                    startPreferencesActivity(BackupsPreferencesFragment.class, "pref_backups");
                });
            });
+       } else if (nutstoreState != null) {
+           // Cloud failures are surfaced separately from the local backup
+           // results; tapping the card opens the Nutstore settings.
+           info = new ErrorCardInfo(
+                   getString(R.string.nutstore_bar_error_message,
+                           NutstoreBackupStatus.failureText(this, nutstoreState.getLastFailure())),
+                   view -> startActivity(new Intent(this, NutstoreBackupsActivity.class)));
        } else if (_prefs.isBackupsReminderNeeded() && _prefs.isBackupReminderEnabled()) {
            String text;
            Date date = _prefs.getLatestBackupOrExportTime();
@@ -1194,6 +1207,24 @@ public class MainActivity extends AegisActivity implements EntryListView.Listene
        }
 
        _entryListView.setErrorCardInfo(info);
+   }
+
+   /**
+    * Returns the persisted Nutstore state when the last upload failed and the
+    * integration is configured, or null otherwise.
+    */
+   @Nullable
+   private NutstoreBackupStore.State getNutstoreFailureState() {
+       try {
+           NutstoreCredentialStore.Config config = new NutstoreCredentialStore(this).loadConfig();
+           if (config.getAccount() == null || !config.isPasswordStored()) {
+               return null;
+           }
+           NutstoreBackupStore.State state = new NutstoreBackupStore(this).loadState();
+           return state.getStatus() == NutstoreBackupStore.Status.FAILED ? state : null;
+       } catch (NutstoreCredentialsException | NutstoreBackupException e) {
+           return null;
+       }
    }
 
     private void showPlaintextExportWarningOptions() {
